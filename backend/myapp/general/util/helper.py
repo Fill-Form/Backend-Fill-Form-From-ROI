@@ -53,7 +53,7 @@ path = './general/util/temp/'
 def main_v1(schemas:list,array_base64:list):
     all_ocr_image = []
     # get header and roi
-    heder, rois = create_object(schemas)
+    header, rois = create_object(schemas)
     # creare pdf 
     i = 0
     for base64_string in array_base64:
@@ -68,8 +68,9 @@ def main_v1(schemas:list,array_base64:list):
 
     # ocr image
     all_result_ocr = ocr(all_ocr_image)
-    gen_csv(heder,all_result_ocr)
-    return 'output.csv'
+    gen_csv(header,all_result_ocr)
+    delete_file(path)
+    return './general/util/temp/output.csv'
 
 def create_object(data):
     document = Document(data)
@@ -131,7 +132,7 @@ def crop_image(files, rois):
 
 def ocr(all_cropped_image_names):
     all_result_ocr = []
-    reader = easyocr.Reader(['th'])
+    reader = easyocr.Reader(['th', 'en'])
     for cropped_image_name in all_cropped_image_names:
         result_ocr = []
         # result = reader.readtext(cropped_image_name)
@@ -158,26 +159,43 @@ def gen_csv(header,all_result_ocr):
     #     writer.writerow(header)
     #     for row in total_data:
     #         writer.writerow(row)
-    with open('output.csv', 'w', newline='', encoding='utf-8') as csvfile:
+    # with open('/general/util/temp/output.csv', 'w', newline='', encoding='utf-8') as csvfile:
+    with open(f'{path}/output.csv', 'w', newline='', encoding='utf-8') as csvfile:
+        # writer = csv.writer(csvfile)
+        # writer.writerow(header)
+        # for result_ocr in all_result_ocr:
+        #     total_data = []
+        #     max_length = max(len(data) for data in result_ocr)
+        #     for i in range(max_length):
+        #         sublist = []
+        #         for data in result_ocr:
+        #             item = data[i][1] if i < len(data) else "-"
+        #             sublist.append(item)
+        #         total_data.append(sublist)
+        #     for row in total_data:
+        #         writer.writerow(row)
         writer = csv.writer(csvfile)
         writer.writerow(header)
         for result_ocr in all_result_ocr:
             total_data = []
-            max_length = max(len(data) for data in result_ocr)
-            for i in range(max_length):
-                sublist = []
-                for data in result_ocr:
-                    item = data[i][1] if i < len(data) else "-"
-                    sublist.append(item)
-                total_data.append(sublist)
+            for sublist in result_ocr:
+                if sublist:
+                    text_data = []
+                    for item in sublist:
+                        text_data.append(item[1])
+                    total_data.append(" ".join(text_data))
+                else:
+                    total_data.append("-")
+            total_data = [total_data]
             for row in total_data:
                 writer.writerow(row)
 
 def delete_file(file_path):
     img_files = glob.glob(os.path.join(file_path, '*.jpg'))
     pdf_files = glob.glob(os.path.join(file_path, '*.pdf'))
-    csv_files = glob.glob(os.path.join(file_path, '*.csv'))
-    all_files = img_files + pdf_files + csv_files
+    # csv_files = glob.glob(os.path.join(file_path, '*.csv'))
+    # all_files = img_files + pdf_files + csv_files
+    all_files = img_files + pdf_files 
     for file in all_files:
         os.remove(file)
 
