@@ -1,5 +1,4 @@
 import base64 as stdlib_base64
-import base64
 
 import os
 # import pytesseract
@@ -16,9 +15,8 @@ from general.model.schema import *
 from PIL import Image
 import csv
 
+import pprint
 import glob
-import os
-import os
 # algo 
 # . decode base64 to pdf 
 # . create object schema
@@ -30,22 +28,6 @@ import os
 # . delete image
 # . delete pdf
 
-        # create object schema
-        # header, rois = create_object(pdf_file)
-        # # convert base64 to pdf
-        # decode_base64_to_pdf(base64_string, 'output.pdf')
-        # # convert pdf to image by page
-        # create_page('output.pdf')
-        # # crop image 
-        # cropped_image_names = crop_image('output.pdf', rois)
-        # # ocr image
-        # result_ocr = ocr(cropped_image_names)
-        # # gen CSV
-        # gen_csv(header,result_ocr)
-        # # delete image
-        # delete_file('./')
-        # # delete pdf
-        # delete_file('./')
 
 # recevie [base64,...] output_file_path : file_output_name
 path = './general/util/temp/'
@@ -68,9 +50,12 @@ def main_v1(schemas:list,array_base64:list):
 
     # ocr image
     all_result_ocr = ocr(all_ocr_image)
+    # pprint.pprint(all_result_ocr)
     gen_csv(header,all_result_ocr)
+    data_with_accuracy = get_accuracy(all_result_ocr)
+    # pprint.pprint(data_with_accuracy)
     delete_file(path)
-    return './general/util/temp/output.csv'
+    return ['./general/util/temp/output.csv', data_with_accuracy]
 
 def create_object(data):
     document = Document(data)
@@ -99,16 +84,6 @@ def create_page(file):
     return filenames
 
 def crop_image(files, rois):
-    # cropped_images = {}
-    # for page_number , page_rois in rois.items():
-    #     image_path = 'page' + str(page_number - 1) + '.jpg'
-    #     image = Image.open(image_path)
-    #     cropped_images[page_number] = []
-    #     for roi in page_rois:
-    #         x0,y0,x1,y1 = roi
-    #         cropped_image = image.crop((x0, y0, x1, y1)) 
-    #         cropped_images[page_number].append(cropped_image)
-
     # crop image
     cropped_images = {}
     for file, page_rois in zip(files, rois.values()):
@@ -131,36 +106,22 @@ def crop_image(files, rois):
     return cropped_image_names
 
 def ocr(all_cropped_image_names):
+    # v2
     all_result_ocr = []
-    reader = easyocr.Reader(['th', 'en'])
+    reader = easyocr.Reader(['th','en'])
     for cropped_image_name in all_cropped_image_names:
         result_ocr = []
-        # result = reader.readtext(cropped_image_name)
-        # all_result_ocr.append(result)
         for img in cropped_image_name:
             result = reader.readtext(img)
             result_ocr.append(result)
         all_result_ocr.append(result_ocr)
+
     return all_result_ocr
 
+
 def gen_csv(header,all_result_ocr):
-    # total_data = []
-    # max_length = max(len(data) for data in result_ocr)
-
-    # for i in range(max_length):
-    #     sublist = []
-    #     for data in result_ocr:
-    #         item = data[i][1] if i < len(data) else "-"
-    #         sublist.append(item)
-    #     total_data.append(sublist)
-
-    # with open('output.csv', 'w', newline='', encoding='utf-8') as csvfile:
-    #     writer = csv.writer(csvfile)
-    #     writer.writerow(header)
-    #     for row in total_data:
-    #         writer.writerow(row)
-    # with open('/general/util/temp/output.csv', 'w', newline='', encoding='utf-8') as csvfile:
-    with open(f'{path}/output.csv', 'w', newline='', encoding='utf-8') as csvfile:
+    # bug v1
+    # with open(f'{path}/output.csv', 'w', newline='', encoding='utf-8') as csvfile:
         # writer = csv.writer(csvfile)
         # writer.writerow(header)
         # for result_ocr in all_result_ocr:
@@ -174,6 +135,9 @@ def gen_csv(header,all_result_ocr):
         #         total_data.append(sublist)
         #     for row in total_data:
         #         writer.writerow(row)
+
+    # finsih v2 
+    with open(f'{path}/output.csv', 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(header)
         for result_ocr in all_result_ocr:
@@ -189,6 +153,21 @@ def gen_csv(header,all_result_ocr):
             total_data = [total_data]
             for row in total_data:
                 writer.writerow(row)
+
+def get_accuracy(all_result_ocr):
+    accuracy_data = {}
+    for result_ocr in all_result_ocr:
+        for sublist in result_ocr:
+            for item in sublist:
+                text = item[1]  # Get the recognized text from the tuple
+                accuracy = item[2]  # Get the accuracy from the tuple
+                if text in accuracy_data:
+                    # If the text is already in the dictionary, append the accuracy to its list
+                    accuracy_data[text].append(accuracy)
+                else:
+                    # If the text is not in the dictionary, create a new list for it
+                    accuracy_data[text] = [accuracy]
+    return accuracy_data
 
 def delete_file(file_path):
     img_files = glob.glob(os.path.join(file_path, '*.jpg'))

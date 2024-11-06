@@ -11,7 +11,8 @@ from rest_framework.decorators import api_view
 import base64
 from general.util.helper import *
 from general.util.constant import *
-
+from django.http import JsonResponse
+import os
 import csv
 from pprint import pprint
 # Create your views here.
@@ -30,22 +31,44 @@ def method(request):
 @api_view(['POST'])
 def get_csv(request:Request):
 
+    # v2
+    # data = json.loads(request.body)
+    # schemas = json.loads(data['schemas'])
+    # array_pdf = json.loads(data['pdfs'])
+    # csv_file_name, data_with_accuracy = main_v1(schemas,array_pdf)
+    # # print(type(schemas))
+    # # pprint(schemas)
+    # # pprint(schemas[0]['Name'])
+    # # pprint(pdf)
+    # # print(type(pdf))
+    # print("done")
+
+    # csv_file = open(csv_file_name, 'rb')
+    # response = FileResponse(csv_file, content_type='text/csv')
+    # response['Content-Disposition'] = f'attachment; filename="{csv_file_name}"'
+    # return response
+    # return Response("DOG",status=status.HTTP_201_CREATED)
+
+    #v3 
     data = json.loads(request.body)
     schemas = json.loads(data['schemas'])
     array_pdf = json.loads(data['pdfs'])
-    csv_file_name = main_v1(schemas,array_pdf)
-    # print(type(schemas))
-    # pprint(schemas)
-    # pprint(schemas[0]['Name'])
-    # pprint(pdf)
-    # print(type(pdf))
+    csv_file_name, data_with_accuracy = main_v1(schemas,array_pdf)
     print("done")
 
-    csv_file = open(csv_file_name, 'rb')
-    response = FileResponse(csv_file, content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{csv_file_name}"'
-    return response
-    # return Response("DOG",status=status.HTTP_201_CREATED)
+    # Read the CSV file and convert it to a base64 string
+    with open(csv_file_name, 'rb') as csv_file:
+        base64_csv = base64.b64encode(csv_file.read()).decode()
+
+    # Create a dictionary that contains both data_with_accuracy and the base64 CSV string
+    response_data = {
+        'data_with_accuracy': data_with_accuracy,
+        'csv_file': base64_csv,
+        'csv_file_name': os.path.basename(csv_file_name)
+    }
+
+    # Convert the dictionary to a JSON response
+    return JsonResponse(response_data)
 
 @api_view(['POST'])
 def get_ocr(request:Request):
